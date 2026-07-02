@@ -114,8 +114,9 @@ export async function editImage(
 
   const seed = opts?.seed ?? Math.floor(Math.random() * 1_000_000_000);
   const publicUrl = await uploadTemp(sourceDataUrl);
+  // kontext lives on the new gen.pollinations.ai host (legacy image host 500s)
   const url =
-    `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}` +
+    `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}` +
     `?model=kontext&image=${encodeURIComponent(publicUrl)}&nologo=true&seed=${seed}`;
 
   // Fetch server-side with the token (never expose it in a client-facing URL).
