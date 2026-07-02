@@ -58,7 +58,7 @@ export default function RootLayout({
           </header>
           <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
           <footer className="mx-auto max-w-6xl px-4 py-10 text-center text-sm text-muted">
-            Browse content Powered by GIPHY · AI Create coming in Phase 3
+            Browse content Powered by GIPHY · AI generation via Pollinations
           </footer>
         </ThemeProvider>
       </body>

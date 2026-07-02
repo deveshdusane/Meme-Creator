@@ -60,8 +60,8 @@ export function CreateStudio() {
     setError(null);
     setResult(null);
 
-    // Use the uploaded image directly as the base — no AI gen, no API call.
-    if (usingUpload && source) {
+    // Upload + NO prompt → use the image directly as the base (no AI call).
+    if (usingUpload && source && !prompt.trim()) {
       setResult({
         imageUrl: source,
         provider: "your upload",
@@ -76,8 +76,14 @@ export function CreateStudio() {
       const res = await fetch("/api/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // in "ai" mode we generate from the prompt only (source = hint via CF)
-        body: JSON.stringify({ prompt, type, sourceImage: source }),
+        // upload + prompt → transform the image (img2img)
+        // no upload / "ai" mode → text-to-image from the prompt
+        body: JSON.stringify({
+          prompt,
+          type,
+          sourceImage: source,
+          transform: usingUpload && Boolean(prompt.trim()),
+        }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Generation failed");
@@ -145,21 +151,28 @@ export function CreateStudio() {
           <label className="mb-2 block text-sm font-medium">
             Prompt{" "}
             {usingUpload && (
-              <span className="text-muted">(not used — applying to your image)</span>
+              <span className="text-muted">
+                (optional — describes what to do with your image)
+              </span>
             )}
           </label>
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            disabled={usingUpload}
             rows={3}
             placeholder={
               usingUpload
-                ? "Switch to “AI-generate instead” to use a prompt"
+                ? "e.g. make him ride a horse, add sunglasses… (empty = use image as-is)"
                 : "e.g. a cat in a business suit looking unimpressed"
             }
-            className="w-full resize-none rounded-xl border border-border bg-surface p-3 text-sm outline-none placeholder:text-muted focus:border-brand disabled:opacity-50"
+            className="w-full resize-none rounded-xl border border-border bg-surface p-3 text-sm outline-none placeholder:text-muted focus:border-brand"
           />
+          {usingUpload && prompt.trim() && (
+            <p className="mt-1.5 text-xs text-muted">
+              AI will redraw your image per this prompt (may take ~30s). Your
+              image is briefly uploaded to a temp host for processing.
+            </p>
+          )}
         </div>
 
         {type === "meme" && (
