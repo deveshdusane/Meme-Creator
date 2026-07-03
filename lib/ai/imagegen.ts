@@ -73,12 +73,14 @@ export interface EditResult {
 export async function editImage(
   prompt: string,
   sourceDataUrl: string,
-  opts?: { seed?: number },
+  opts?: { seed?: number; userToken?: string },
 ): Promise<EditResult> {
-  const token = process.env.POLLINATIONS_TOKEN;
+  // BYOK: a visitor-supplied key takes priority (spends their own free Pollen);
+  // otherwise fall back to the site's own POLLINATIONS_TOKEN.
+  const token = opts?.userToken || process.env.POLLINATIONS_TOKEN;
   if (!token) {
     throw new Error(
-      "Image transform needs a free Pollinations token: register at enter.pollinations.ai, then set POLLINATIONS_TOKEN in the environment.",
+      "Image transform needs a free Pollinations key: register at enter.pollinations.ai (Keys → Add Key), then paste it in the “Your Pollinations key” field.",
     );
   }
 

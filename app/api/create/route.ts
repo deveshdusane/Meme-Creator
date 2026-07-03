@@ -20,6 +20,12 @@ export async function POST(req: NextRequest) {
   const sourceImage: string | null =
     typeof body?.sourceImage === "string" ? body.sourceImage : null;
   const transform = Boolean(body?.transform);
+  // BYOK: optional visitor-supplied Pollinations key (sk_...), used only for
+  // this request — never stored server-side.
+  const userToken: string | undefined =
+    typeof body?.userToken === "string" && /^sk_[A-Za-z0-9_-]{10,80}$/.test(body.userToken)
+      ? body.userToken
+      : undefined;
 
   if (!prompt && !sourceImage) {
     return NextResponse.json(
@@ -31,7 +37,7 @@ export async function POST(req: NextRequest) {
   try {
     // Transform mode: edit the user's uploaded image per the prompt (img2img).
     if (transform && sourceImage && prompt) {
-      const edit = await editImage(prompt, sourceImage);
+      const edit = await editImage(prompt, sourceImage, { userToken });
       return NextResponse.json({
         imageUrl: edit.url,
         provider: edit.provider,

@@ -6,8 +6,9 @@ import {
   Film,
   Sparkles,
   Loader2,
+  KeyRound,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { OutputType } from "@/lib/ai/prompt";
 import { Uploader } from "./Uploader";
 import { ResultCanvas } from "./ResultCanvas";
@@ -42,6 +43,19 @@ export function CreateStudio() {
   );
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+  // BYOK — visitor's own Pollinations key, kept in their browser only
+  const [userKey, setUserKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("pollinations_key") || "";
+    if (saved) setUserKey(saved);
+  }, []);
+
+  function saveKey(v: string) {
+    setUserKey(v);
+    localStorage.setItem("pollinations_key", v.trim());
+  }
 
   const animatedType = type === "gif" || type === "clip";
   const usingUpload = Boolean(source) && mode === "upload";
@@ -83,6 +97,7 @@ export function CreateStudio() {
           type,
           sourceImage: source,
           transform: usingUpload && Boolean(prompt.trim()),
+          userToken: userKey.trim() || undefined,
         }),
       });
       const json = await res.json();
@@ -168,10 +183,44 @@ export function CreateStudio() {
             className="w-full resize-none rounded-xl border border-border bg-surface p-3 text-sm outline-none placeholder:text-muted focus:border-brand"
           />
           {usingUpload && prompt.trim() && (
-            <p className="mt-1.5 text-xs text-muted">
-              AI will redraw your image per this prompt (may take ~30s). Your
-              image is briefly uploaded to a temp host for processing.
-            </p>
+            <div className="mt-1.5 space-y-2">
+              <p className="text-xs text-muted">
+                AI will redraw your image per this prompt (may take ~30s). Your
+                image is briefly uploaded to a temp host for processing.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline"
+              >
+                <KeyRound size={13} />
+                {userKey ? "Using your Pollinations key" : "Use your own free key (optional)"}
+              </button>
+              {showKey && (
+                <div className="space-y-1.5 rounded-xl border border-border bg-surface p-3">
+                  <input
+                    value={userKey}
+                    onChange={(e) => saveKey(e.target.value)}
+                    placeholder="sk_..."
+                    spellCheck={false}
+                    className="w-full rounded-lg border border-border bg-bg p-2 font-mono text-xs outline-none placeholder:text-muted focus:border-brand"
+                  />
+                  <p className="text-xs text-muted">
+                    Image transforms cost a little Pollen. Get a free key with
+                    free credits at{" "}
+                    <a
+                      href="https://enter.pollinations.ai"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand underline"
+                    >
+                      enter.pollinations.ai
+                    </a>{" "}
+                    (Keys → Add Key). Stored only in your browser.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
