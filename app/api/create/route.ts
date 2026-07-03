@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeImage } from "@/lib/ai/analyze";
 import { generateImage, editImage } from "@/lib/ai/imagegen";
 import { buildPrompt, dimsFor, type OutputType } from "@/lib/ai/prompt";
 
@@ -43,21 +42,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 1. Analyze upload (optional — null if no CF key)
-    const caption = sourceImage ? await analyzeImage(sourceImage) : null;
-
-    // 2. Build final prompt
-    const finalPrompt = buildPrompt(type, prompt, caption);
-
-    // 3. Generate
+    // Text-to-image: build the styled prompt and generate.
+    const finalPrompt = buildPrompt(type, prompt, null);
     const dims = dimsFor(type);
     const gen = await generateImage(finalPrompt, dims);
 
-    // 4. Return (GIF/clip animation is Phase 4 — still image returned now)
     return NextResponse.json({
       imageUrl: gen.url,
       provider: gen.provider,
-      analysis: caption,
+      analysis: null,
       finalPrompt,
       animated: false,
       type,

@@ -16,8 +16,7 @@ export default function CreatePage() {
         <h1 className="text-2xl font-bold">Create with AI</h1>
         <p className="mt-1 text-muted">
           Upload an image or video, write a prompt, pick a type — AI generates a
-          shareable result. Free, no signup (Pollinations); add a Cloudflare key
-          for vision analysis.
+          shareable result. Powered by Pollinations AI.
         </p>
       </div>
 

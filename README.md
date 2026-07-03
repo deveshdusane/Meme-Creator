@@ -26,8 +26,8 @@ telling you how to add a free GIPHY key.
 ## Phase 2–3 — AI Create (done)
 
 - Upload image/video (video frame auto-extracted), prompt, output-type picker
-- Image gen: Pollinations FLUX (no key) → Cloudflare FLUX when key set
-- Vision analysis of upload via Cloudflare (optional)
+- Image gen: Pollinations FLUX (no key needed)
+- Image transform (img2img): Pollinations Kontext — free POLLINATIONS_TOKEN from enter.pollinations.ai
 - Meme caption overlay (Impact, top/bottom) on a canvas → download PNG
 
 ## Phase 4 — Stickers + animation (done, client-side, free)

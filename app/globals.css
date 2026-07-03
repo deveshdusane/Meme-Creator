@@ -9,7 +9,8 @@
   --border: 226 230 236;
   --fg: 17 20 26;
   --muted: 110 119 132;
-  --brand: 99 102 241; /* indigo-500 */
+  --brand: 99 102 241;
+  /* indigo-500 */
 }
 
 .dark {
@@ -19,7 +20,8 @@
   --border: 37 41 51;
   --fg: 237 240 245;
   --muted: 142 150 163;
-  --brand: 129 140 248; /* indigo-400 */
+  --brand: 129 140 248;
+  /* indigo-400 */
 }
 
 html,
@@ -37,6 +39,7 @@ body {
   width: 10px;
   height: 10px;
 }
+
 ::-webkit-scrollbar-thumb {
   background: rgb(var(--border));
   border-radius: 9999px;
