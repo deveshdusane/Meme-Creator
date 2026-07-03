@@ -66,32 +66,71 @@ async function uploadTemp(dataUrl: string): Promise<string> {
 }
 
 export interface EditResult {
-  url: string; // data URL — image is fetched server-side so the token stays secret
-  provider: "pollinations-kontext";
+  url: string; // data URL — fetched server-side so keys never reach the client
+  provider: "gemini-image" | "pollinations-kontext";
 }
 
-export async function editImage(
+// Gemini 2.5 Flash Image ("nano-banana") — free daily API quota, takes the
+// source image inline as base64 (no temp-host upload needed).
+async function editWithGemini(
   prompt: string,
   sourceDataUrl: string,
-  opts?: { seed?: number; userToken?: string },
+  apiKey: string,
 ): Promise<EditResult> {
-  // BYOK: a visitor-supplied key takes priority (spends their own free Pollen);
-  // otherwise fall back to the site's own POLLINATIONS_TOKEN.
-  const token = opts?.userToken || process.env.POLLINATIONS_TOKEN;
-  if (!token) {
-    throw new Error(
-      "Image transform needs a free Pollinations key: register at enter.pollinations.ai (Keys → Add Key), then paste it in the “Your Pollinations key” field.",
-    );
-  }
+  const comma = sourceDataUrl.indexOf(",");
+  const mime = /data:(.*?);/.exec(sourceDataUrl)?.[1] || "image/jpeg";
+  const b64 = sourceDataUrl.slice(comma + 1);
 
-  const seed = opts?.seed ?? Math.floor(Math.random() * 1_000_000_000);
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mime, data: b64 } },
+            ],
+          },
+        ],
+      }),
+    },
+  );
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 300);
+    throw new Error(`Gemini edit failed (${res.status}): ${detail}`);
+  }
+  const json = await res.json();
+  const parts = json?.candidates?.[0]?.content?.parts || [];
+  const imgPart = parts.find((p: any) => p.inlineData?.data || p.inline_data?.data);
+  if (!imgPart) {
+    const text = parts.find((p: any) => p.text)?.text?.slice(0, 200);
+    throw new Error(`Gemini returned no image${text ? `: ${text}` : ""}`);
+  }
+  const data = imgPart.inlineData?.data || imgPart.inline_data?.data;
+  const outMime =
+    imgPart.inlineData?.mimeType || imgPart.inline_data?.mime_type || "image/png";
+  return { url: `data:${outMime};base64,${data}`, provider: "gemini-image" };
+}
+
+// Pollinations Kontext — needs a public URL for the source image + a token.
+async function editWithKontext(
+  prompt: string,
+  sourceDataUrl: string,
+  token: string,
+  seed: number,
+): Promise<EditResult> {
   const publicUrl = await uploadTemp(sourceDataUrl);
   // kontext lives on the new gen.pollinations.ai host (legacy image host 500s)
   const url =
     `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}` +
     `?model=kontext&image=${encodeURIComponent(publicUrl)}&nologo=true&seed=${seed}`;
 
-  // Fetch server-side with the token (never expose it in a client-facing URL).
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -105,4 +144,35 @@ export async function editImage(
     url: `data:${mime};base64,${b64}`,
     provider: "pollinations-kontext",
   };
+}
+
+// Backend order: Gemini (free daily quota) → visitor's Pollinations key →
+// site Pollinations key. Falls through on failure so a quota hit on one
+// backend doesn't kill the request.
+export async function editImage(
+  prompt: string,
+  sourceDataUrl: string,
+  opts?: { seed?: number; userToken?: string },
+): Promise<EditResult> {
+  const seed = opts?.seed ?? Math.floor(Math.random() * 1_000_000_000);
+  const gemini = process.env.GEMINI_API_KEY;
+  const pollinations = opts?.userToken || process.env.POLLINATIONS_TOKEN;
+
+  let geminiError: Error | null = null;
+  if (gemini) {
+    try {
+      return await editWithGemini(prompt, sourceDataUrl, gemini);
+    } catch (e: any) {
+      geminiError = e; // quota/500 → fall through to Pollinations
+    }
+  }
+
+  if (pollinations) {
+    return editWithKontext(prompt, sourceDataUrl, pollinations, seed);
+  }
+
+  if (geminiError) throw geminiError;
+  throw new Error(
+    "Image transform needs a key: set GEMINI_API_KEY (free at aistudio.google.com) or a Pollinations key (enter.pollinations.ai).",
+  );
 }
